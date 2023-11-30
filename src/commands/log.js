@@ -13,10 +13,12 @@ const command = {
     // Formatting the output into a valid JSON array
     const jsonOutput = `[${output.slice(0, -1)}]`
     const spreadsheetId = '1bhPXHDXPlFxGxhRMa3AjZeTHvJTqDRqDTjER4R9-l9g'
-    // Parse JSON string into an array of objects
-    const commits = JSON.parse(jsonOutput)
+    const range = 'Sheet1!A1:C10' // Replace with your desired range
 
-    toolbox.print.info(commits)
+    // Parse JSON string into an array of objects
+    const newCommits = JSON.parse(jsonOutput)
+
+    toolbox.print.info(newCommits)
     print.info('Welcome to LOG')
     // Authenticate with Google Sheets
     const auth = new google.auth.GoogleAuth({
@@ -25,30 +27,26 @@ const command = {
     })
 
     const sheets = google.sheets({ version: 'v4', auth })
-    const range = 'Sheet1!A1:C10' // Replace with your desired range
     const { data } = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range, // Adjust the range according to your needs
+      spreadsheetId: spreadsheetId,
+      range, // Assuming the commit hash is in column A
     })
-    const existingRows = data.values || []
 
-    const newCommits = [
-      /* ... your new commits data ... */
-    ]
-    const existingCommitsHashes = new Set(existingRows.map((row) => row[0])) // Assuming commit hash is in the first column
+    const existingCommits = new Set(data.values ? data.values.flat() : [])
 
+    // Filter out duplicate entries
     const uniqueCommits = newCommits.filter(
-      (commit) => !existingCommitsHashes.has(commit.commit)
+      (commit) => !existingCommits.has(commit.commit)
     )
-
-    // Add data to Google Sheets
-    // Replace with your Spreadsheet ID
+    console.log({ existingCommits, newCommits, uniqueCommits })
+    // Format data for Sheets
     const sheetData = uniqueCommits.map((commit) => [
       commit.date,
       commit.author,
       commit.commit,
       commit.message,
     ])
+    console.log(sheetData)
     if (sheetData.length > 0) {
       await sheets.spreadsheets.values.append({
         spreadsheetId,
@@ -58,11 +56,10 @@ const command = {
           values: sheetData,
         },
       })
+      toolbox.print.info('Data added to Google Sheets.')
     } else {
       toolbox.print.info('No new data to add.')
     }
-
-    toolbox.print.info('Data added to Google Sheets.')
   },
 }
 
