@@ -12,7 +12,7 @@ const command = {
 
     // Formatting the output into a valid JSON array
     const jsonOutput = `[${output.slice(0, -1)}]`
-
+    const spreadsheetId = '1bhPXHDXPlFxGxhRMa3AjZeTHvJTqDRqDTjER4R9-l9g'
     // Parse JSON string into an array of objects
     const commits = JSON.parse(jsonOutput)
 
@@ -25,26 +25,42 @@ const command = {
     })
 
     const sheets = google.sheets({ version: 'v4', auth })
+    const range = 'Sheet1!A1:C10' // Replace with your desired range
+    const { data } = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range, // Adjust the range according to your needs
+    })
+    const existingRows = data.values || []
+
+    const newCommits = [
+      /* ... your new commits data ... */
+    ]
+    const existingCommitsHashes = new Set(existingRows.map((row) => row[0])) // Assuming commit hash is in the first column
+
+    const uniqueCommits = newCommits.filter(
+      (commit) => !existingCommitsHashes.has(commit.commit)
+    )
 
     // Add data to Google Sheets
-    const spreadsheetId = '1bhPXHDXPlFxGxhRMa3AjZeTHvJTqDRqDTjER4R9-l9g' // Replace with your Spreadsheet ID
-    const range = 'Sheet1!A1:C10' // Replace with your desired range
-    const sheetData = commits.map((commit) => [
+    // Replace with your Spreadsheet ID
+    const sheetData = uniqueCommits.map((commit) => [
       commit.date,
       commit.author,
       commit.commit,
       commit.message,
     ])
-    const headers = ['Date', 'Author', 'Commit', 'Message']
-    sheetData.unshift(headers)
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range,
-      valueInputOption: 'USER_ENTERED',
-      resource: {
-        values: sheetData,
-      },
-    })
+    if (sheetData.length > 0) {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range,
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: sheetData,
+        },
+      })
+    } else {
+      toolbox.print.info('No new data to add.')
+    }
 
     toolbox.print.info('Data added to Google Sheets.')
   },
