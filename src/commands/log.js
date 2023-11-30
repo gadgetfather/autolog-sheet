@@ -1,6 +1,7 @@
 const { google } = require('googleapis')
 const { execSync } = require('child_process')
 const credentials = require('./credential.json')
+//comment
 const command = {
   name: 'log',
   run: async (toolbox) => {
